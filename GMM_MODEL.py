@@ -1,8 +1,15 @@
+from model import *
+from utils import *
+import random
+
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import *
-from scipy.stats.multivariate_normal import pdf as multivariate_normal_pdf
-from ConfusionMatrix import *
+from scipy.stats import multivariate_normal
+multivariate_normal_pdf = multivariate_normal.pdf
+# from ConfusionMatrix import *
+
+GRID_SIZE = 100
 
 def grid_points(classes_data_to_show=[]):
     
@@ -113,11 +120,90 @@ class confusion_matrix:
             f1_score.append(2 * precision[i] * recall[i] / (precision[i] + recall[i]))
 
         return f1_score
+    
 class Cluster_representation:
     def __init__(self,mean=[],covariance=[],weight=0):
         self.mean=mean
         self.covariance=covariance
         self.weight=weight
+
+# class class_representation:
+#     def __init__(self, k=1):
+#         self.clusters = []
+#         self.prior = 1
+#         self.num_of_clusters = k
+
+#     def point_probability_for_cluster(self, point, cluster):
+#         total_probability = 0
+#         for i in range(self.num_of_clusters):
+#             total_probability += self.clusters[i].weight * multivariate_normal_pdf(
+#                 point, self.clusters[i].mean, self.clusters[i].covariance)
+#         if total_probability < 1e-10:
+#             return 0
+#         return (self.clusters[cluster].weight * multivariate_normal_pdf(
+#             point, self.clusters[cluster].mean, self.clusters[cluster].covariance)) / total_probability
+
+#     def fit(self, data):
+        
+#         # Initializing cluster centers
+#         centers = set()
+#         while len(centers) < self.num_of_clusters:
+#             centers.add(random.randint(0, len(data) - 1))
+#         centers = list(centers)
+#         self.clusters = [Cluster_representation(data[centers[i]], np.identity(len(data[0])), 1 / self.num_of_clusters) for i in range(self.num_of_clusters)]
+
+#         data = np.array(data)
+
+#         iteration_no=0
+#         while True:
+#             print("iteration no.",iteration_no,"MEANS : ",[i.mean for i in self.clusters])
+#             iteration_no+=1
+            
+            
+            
+            
+#             # Expectation and Maximization steps
+#             new_clusters = [Cluster_representation() for _ in range(self.num_of_clusters)]
+#             for i in range(self.num_of_clusters):
+#                 new_clusters[i].mean = np.zeros(len(data[0]))
+#                 new_clusters[i].covariance = np.zeros((len(data[0]), len(data[0])))
+#                 new_clusters[i].weight = 0
+                
+            
+
+#             for i in range(len(data)):
+#                 for j in range(self.num_of_clusters):
+#                     probability = self.point_probability_for_cluster(data[i], j)
+#                     # print(probability*data[i], "dkdk",new_clusters[j].mean)
+#                     new_clusters[j].mean += probability * data[i]
+
+#             for j in range(self.num_of_clusters):
+#                 new_clusters[j].covariance = np.identity(len(data[0]))  # Initialize covariance as identity
+
+#             Effective_num_of_points = [0 for _ in range(self.num_of_clusters)]
+#             for i in range(len(data)):
+#                 for j in range(self.num_of_clusters):
+#                     new_clusters[j].covariance += self.point_probability_for_cluster(data[i], j) * np.outer(data[i] - new_clusters[j].mean, data[i] - new_clusters[j].mean)
+#                     Effective_num_of_points[j] += self.point_probability_for_cluster(data[i], j)
+
+#             for i in range(self.num_of_clusters):
+#                 new_clusters[i].mean /= Effective_num_of_points[i]
+#                 new_clusters[i].covariance /= Effective_num_of_points[i]
+#                 new_clusters[i].weight = Effective_num_of_points[i] / len(data)
+
+#             # Check for convergence using an appropriate criterion
+#             converged = True
+#             for i in range(self.num_of_clusters):
+#                 if np.linalg.norm(new_clusters[i].mean - self.clusters[i].mean) > 0.01:
+#                     converged = False
+#                     break
+
+#             if converged:
+#                 break
+
+#         # Set the clusters to the new clusters after convergence
+#         self.clusters = new_clusters
+        
 
 class class_representation:
     def __init__(self,k=1):
@@ -126,9 +212,17 @@ class class_representation:
         self.num_of_clusters=k
         
     def point_probability_for_cluster(self,point,cluster):
+        # print(self.num_of_clusters)
+        # print(self.clusters)
         total_probability=0
         for i in range(self.num_of_clusters):
-            total_probability+=self.clusters[i].weight*multivariate_normal_pdf(point,self.clusters[i].mean,self.clusters[i].covariance)
+            # also handle singular matrix error
+            if(np.linalg.det(self.clusters[i].covariance)==0):
+                return 0
+            total_probability+=self.clusters[i].weight*multivariate_normal_pdf(point,self.clusters[i].mean,self.clusters[i].covariance,allow_singular=True)
+        # print("Total Probability :",total_probability,)
+        if(total_probability==0):
+            return 0
         return (self.clusters[cluster].weight*multivariate_normal_pdf(point,self.clusters[cluster].mean,self.clusters[cluster].covariance))/total_probability
     
     def fit(self,data):
@@ -137,9 +231,16 @@ class class_representation:
         while len(centers)<self.num_of_clusters:
             centers.add(random.randint(0,len(data)-1))
         centers=list(centers)
+        self.clusters = [Cluster_representation(data[centers[i]], np.identity(len(data[0])), 1 / self.num_of_clusters) for i in range(self.num_of_clusters)]
         
         
+        data=np.array(data)
+        
+        iteration_no=0
         while True:
+            iteration_no+=1
+            print(iteration_no)
+            print([i.mean for i in self.clusters])
             # expecation and maximization steps
             new_clusters = [Cluster_representation() for i in range(self.num_of_clusters)]
             # calculating the mean of each cluster
@@ -153,11 +254,14 @@ class class_representation:
                 new_clusters[i].mean=sums[i]/Effective_num_of_points[i]
             
             # calculating the covariance of each cluster
+            for i in range(self.num_of_clusters):
+                sums[i]=np.zeros((len(data[0]),len(data[0])))
             for i in range(len(data)):
                 for j in range(self.num_of_clusters):
-                    new_clusters[j].covariance+=self.point_probability_for_cluster(data[i],j)*np.dot((data[i]-new_clusters[j].mean).reshape(-1,1),(data[i]-new_clusters[j].mean).reshape(1,-1))
+                    sums[j]+=self.point_probability_for_cluster(data[i],j)*np.outer(data[i]-new_clusters[j].mean,data[i]-new_clusters[j].mean)
             for i in range(self.num_of_clusters):
-                new_clusters[i].covariance/=Effective_num_of_points[i]
+                new_clusters[i].covariance=sums[i]/Effective_num_of_points[i]
+                
                 
             # calculating the weight of each cluster
             for i in range(self.num_of_clusters):
@@ -166,12 +270,18 @@ class class_representation:
             # checking for convergence
             converged=True
             for i in range(self.num_of_clusters):
-                if np.linalg.norm(new_clusters[i].mean-self.clusters[i].mean)>0.01:
-                    converged=False
+                percentage_change = abs((new_clusters[i].mean - self.clusters[i].mean) / self.clusters[i].mean) * 100
+                print("percentage change in mean :",percentage_change)
+                if (percentage_change > 0.1).any():
+                    converged = False
                     break
             
             if converged:
                 break   
+            else:
+                self.clusters=new_clusters
+            
+        
 
 class Bayes_Classifier_GMM:
     def __init__(self):
@@ -190,6 +300,8 @@ class Bayes_Classifier_GMM:
         for i in range(self.num_of_classes):
             probability=0
             for j in range(self.classes[i].num_of_clusters):
+                if(np.linalg.det(self.classes[i].clusters[j].covariance)==0):
+                    continue
                 probability+=self.classes[i].clusters[j].weight*multivariate_normal_pdf(vector,self.classes[i].clusters[j].mean,self.classes[i].clusters[j].covariance)
             if probability>max_probability:
                 max_probability=probability
@@ -246,3 +358,45 @@ class Bayes_Classifier_GMM:
         plt.savefig(f"Images\Decision Regions for {title}")
         
         plt.close()
+
+
+def all_setps(DataForEachClass,title,saveOnly=False):
+    # splitting the data into train data and test data
+    TrainData = []
+    TestData = []
+    for cls in DataForEachClass:
+        Train, Test = SplitList(cls, 0.7)
+        TrainData.append(Train)
+        TestData.append(Test)
+        
+    # creating models
+
+    model=Bayes_Classifier_GMM()
+
+    # train models
+    model.train(TrainData)
+
+
+    m = 0
+    m += 1
+    n = 0
+    print("\nfor case ", m)
+    for i in model.classes:
+        n += 1
+        print("Class", n)
+        print("Mean:\n", i.mean)
+        print("Covariance:\n", i.covariance)
+        print("Prior:\n", i.prior)
+        print("")
+            
+    # test model
+    n = 0
+    n += 1
+    print("\nfor case ", n)
+    confusion = model.test(TestData)
+    confusion.print()
+        
+    # plot decion regions
+    case = 0
+    case+=1
+    model.plot_decision_regions_2d(f"{title} for {case}",TrainData,saveOnly=saveOnly)
