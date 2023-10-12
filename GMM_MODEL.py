@@ -1,5 +1,3 @@
-from model import *
-from utils import *
 import random
 
 import numpy as np
@@ -9,7 +7,141 @@ from scipy.stats import multivariate_normal
 multivariate_normal_pdf = multivariate_normal.pdf
 # from ConfusionMatrix import *
 
-GRID_SIZE = 100
+# K- MEANS CLUSTERING
+
+# initialization of  mean i.e choose random centeroids
+
+def initilization(data, n_components):
+    """
+    parameter : 
+        data -> class_data in numpy array format
+         n_components   -> Number of cluster
+    -----------------------------
+    return  : initial center for k_mean clustering in list format
+    
+    """
+    np.random.seed(0)
+   
+    i_mean = []
+    i=1
+    while i < n_components+1:
+        a = random.choice(data)
+        i_mean.append(a.tolist())
+        #i_mean.append(a)
+        i += 1
+    
+    #print("---  ----  ---  initial",i_mean)
+    #print("@@@@@@@")
+    return i_mean
+
+
+# distance between each point and center
+
+def point_assignment_to_cluster(data , initial_mean, n_components):
+    """
+    parameters : 
+        data -> class_data in numpy array format
+         n_components   ->  Number of cluster
+        initial_mean -> initialization function output i.e. initial mean
+    
+    return : list containing lists and each inner list contained data_points belonging to corresponding cluster
+             
+    
+    """
+    
+    # k empty lists
+    l = [[] for i in range(n_components)]
+    # print(l[1])
+
+    for i in data:
+        #print("    for ",i," in data     ")
+        lst = []
+        for j in initial_mean:
+            #print("    for  ",j,"in initial_mean     ")
+            d = np.sqrt((i[0]-j[0])**2 +(i[1]-j[1])**2)
+           # print("distance.......",d)
+            lst.append(d) # [d1,d2,d3....dk]
+        #print("distance list--------",lst)
+        dist_list = np.array(lst)  
+        z = dist_list.argmin()
+        #l[z].append(i.tolist())
+        l[z].append(i)
+    #print("function ending")
+    return l
+
+def updated_mean(l):
+    """
+    parameter : output of point_assignment_to_cluster function
+    --------------------------
+    return  : updated mean  (list)
+    
+    calculate mean of each list contained in main list
+    """
+    #print("update mean started and l is ",l)
+    up_mea =[]
+    for i in range(len(l)):
+        sum1=0
+        sum2 =0
+        for j in range(len(l[i])):
+            #if len(l[i])!=0:               # ----------??????????????????????-----------
+            sum1 += l[i][j][0]
+            sum2 += l[i][j][1]
+        if len(l[i])!=0:
+            sum1 = sum1/len(l[i])
+            sum2 = sum2 /len(l[i])
+        up_mea.append([sum1,sum2])
+        
+    return up_mea
+
+def  k_means(data , n_components, iters=10):
+    """
+    final k_mean function 
+    parameters: 
+        data -> class_data in numpy array format
+         n_components   -> Number of cluster
+    --------------------------
+    return :
+        centroids i.e mean_vector i.e mean of each cluster (list containing mean vector whose dimension is same as number of
+           features)
+        p -> list containing lists and each inner list contained data_points belonging to a corresponding updated_cluster
+    """
+
+    # initialization of  mean
+    ini_mean = initilization(data, n_components)
+    
+    # number of iterations
+    # iters=10
+    
+    j = 0
+    while j < iters:
+        
+        if j == 0 :
+            latest_mean = ini_mean
+        else:
+            pass
+            #latest_mean = center
+        p = point_assignment_to_cluster(data, latest_mean, n_components)
+        #print("()()()()()()()      points   ()()()()()()()  ", p)
+        #print("()()()()()()()      points   ()()()()()()()"  )
+
+        #print(p)
+        center = updated_mean(p)
+        #print(">>>>>>>", center)
+        latest_mean = center
+
+        #ini_mean = center
+        #print(ini_mean)
+        j += 1
+        
+        print("center :",center)
+
+    return center
+
+
+
+
+
+GRID_SIZE = 200
 
 def grid_points(classes_data_to_show=[]):
     
@@ -127,83 +259,6 @@ class Cluster_representation:
         self.covariance=covariance
         self.weight=weight
 
-# class class_representation:
-#     def __init__(self, k=1):
-#         self.clusters = []
-#         self.prior = 1
-#         self.num_of_clusters = k
-
-#     def point_probability_for_cluster(self, point, cluster):
-#         total_probability = 0
-#         for i in range(self.num_of_clusters):
-#             total_probability += self.clusters[i].weight * multivariate_normal_pdf(
-#                 point, self.clusters[i].mean, self.clusters[i].covariance)
-#         if total_probability < 1e-10:
-#             return 0
-#         return (self.clusters[cluster].weight * multivariate_normal_pdf(
-#             point, self.clusters[cluster].mean, self.clusters[cluster].covariance)) / total_probability
-
-#     def fit(self, data):
-        
-#         # Initializing cluster centers
-#         centers = set()
-#         while len(centers) < self.num_of_clusters:
-#             centers.add(random.randint(0, len(data) - 1))
-#         centers = list(centers)
-#         self.clusters = [Cluster_representation(data[centers[i]], np.identity(len(data[0])), 1 / self.num_of_clusters) for i in range(self.num_of_clusters)]
-
-#         data = np.array(data)
-
-#         iteration_no=0
-#         while True:
-#             print("iteration no.",iteration_no,"MEANS : ",[i.mean for i in self.clusters])
-#             iteration_no+=1
-            
-            
-            
-            
-#             # Expectation and Maximization steps
-#             new_clusters = [Cluster_representation() for _ in range(self.num_of_clusters)]
-#             for i in range(self.num_of_clusters):
-#                 new_clusters[i].mean = np.zeros(len(data[0]))
-#                 new_clusters[i].covariance = np.zeros((len(data[0]), len(data[0])))
-#                 new_clusters[i].weight = 0
-                
-            
-
-#             for i in range(len(data)):
-#                 for j in range(self.num_of_clusters):
-#                     probability = self.point_probability_for_cluster(data[i], j)
-#                     # print(probability*data[i], "dkdk",new_clusters[j].mean)
-#                     new_clusters[j].mean += probability * data[i]
-
-#             for j in range(self.num_of_clusters):
-#                 new_clusters[j].covariance = np.identity(len(data[0]))  # Initialize covariance as identity
-
-#             Effective_num_of_points = [0 for _ in range(self.num_of_clusters)]
-#             for i in range(len(data)):
-#                 for j in range(self.num_of_clusters):
-#                     new_clusters[j].covariance += self.point_probability_for_cluster(data[i], j) * np.outer(data[i] - new_clusters[j].mean, data[i] - new_clusters[j].mean)
-#                     Effective_num_of_points[j] += self.point_probability_for_cluster(data[i], j)
-
-#             for i in range(self.num_of_clusters):
-#                 new_clusters[i].mean /= Effective_num_of_points[i]
-#                 new_clusters[i].covariance /= Effective_num_of_points[i]
-#                 new_clusters[i].weight = Effective_num_of_points[i] / len(data)
-
-#             # Check for convergence using an appropriate criterion
-#             converged = True
-#             for i in range(self.num_of_clusters):
-#                 if np.linalg.norm(new_clusters[i].mean - self.clusters[i].mean) > 0.01:
-#                     converged = False
-#                     break
-
-#             if converged:
-#                 break
-
-#         # Set the clusters to the new clusters after convergence
-#         self.clusters = new_clusters
-        
 
 class class_representation:
     def __init__(self,k=1):
@@ -223,21 +278,41 @@ class class_representation:
         # print("Total Probability :",total_probability,)
         if(total_probability==0):
             return 0
-        return (self.clusters[cluster].weight*multivariate_normal_pdf(point,self.clusters[cluster].mean,self.clusters[cluster].covariance))/total_probability
+        return (self.clusters[cluster].weight*multivariate_normal_pdf(point,self.clusters[cluster].mean,self.clusters[cluster].covariance,allow_singular=True))/total_probability
     
-    def fit(self,data):
-        # initilizing cluster centers
-        centers=set()
-        while len(centers)<self.num_of_clusters:
-            centers.add(random.randint(0,len(data)-1))
-        centers=list(centers)
-        self.clusters = [Cluster_representation(data[centers[i]], np.identity(len(data[0])), 1 / self.num_of_clusters) for i in range(self.num_of_clusters)]
+    def total_data_likelihood(self, data):
+        likelihood=0
+        for point in data:
+            l=0
+            for i in range(self.num_of_clusters):
+                    # also handle singular matrix error
+                    if(not np.linalg.det(self.clusters[i].covariance)==0):
+                        l+=self.clusters[i].weight*multivariate_normal_pdf(point,self.clusters[i].mean,self.clusters[i].covariance,allow_singular=True)
+            likelihood+=np.log10(l)
+        return likelihood
+                
+    def fit(self,data,max_itr):
+        # initilizing cluster centers with help of k-means
+        
+        data1=np.array(data)
+        centers=k_means(data1,self.num_of_clusters,5)
+
+        
+        self.clusters = [Cluster_representation() for i in range(self.num_of_clusters)]
+        for i in range(self.num_of_clusters):
+            self.clusters[i].mean=centers[i]
+            self.clusters[i].covariance=np.identity(len(data[0]))
+            self.clusters[i].weight=1/self.num_of_clusters
         
         
         data=np.array(data)
         
+        likelihood=[]
         iteration_no=0
         while True:
+            if(iteration_no>max_itr):
+                break
+            
             iteration_no+=1
             print(iteration_no)
             print([i.mean for i in self.clusters])
@@ -272,37 +347,62 @@ class class_representation:
             for i in range(self.num_of_clusters):
                 percentage_change = abs((new_clusters[i].mean - self.clusters[i].mean) / self.clusters[i].mean) * 100
                 print("percentage change in mean :",percentage_change)
-                if (percentage_change > 0.1).any():
+                if (percentage_change > 0.5).any():
                     converged = False
                     break
+            
+            likelihood.append([iteration_no,self.total_data_likelihood(data)])
             
             if converged:
                 break   
             else:
                 self.clusters=new_clusters
             
-        
+        return likelihood
 
 class Bayes_Classifier_GMM:
-    def __init__(self):
+    def __init__(self,k):
         self.classes=[]
         self.num_of_classes=0
+        self.k=k
+    
         
-    def train(self,classes_train_data):
+    def train(self,classes_train_data,max_itr=200):
         self.num_of_classes=len(classes_train_data)
+        likelihood=[]
         for i in range(self.num_of_classes):
-            self.classes.append(class_representation(3))
-            self.classes[i].fit(classes_train_data[i])
-            
-    def predict(self,vector):
+            self.classes.append(class_representation(self.k))
+            likelihood.append(self.classes[i].fit(classes_train_data[i],max_itr))
+        return likelihood
+        
+    def predictVectors(self,vectors):
         max_probability=0
         which_class=0
         for i in range(self.num_of_classes):
+            AllVectorsProbability=1
+            for vector in vectors:                
+                probability=0
+                for j in range(self.classes[i].num_of_clusters):
+                    if(np.linalg.det(self.classes[i].clusters[j].covariance)==0):
+                        continue
+                    probability+=self.classes[i].clusters[j].weight*multivariate_normal_pdf(vector,self.classes[i].clusters[j].mean,self.classes[i].clusters[j].covariance,allow_singular=True)
+                AllVectorsProbability*=probability
+            if AllVectorsProbability>max_probability:
+                max_probability=AllVectorsProbability
+                which_class=i
+        return which_class
+            
+    def predict(self,vector,ConsiderClasses=-1):
+        max_probability=0
+        which_class=0
+        for i in range(self.num_of_classes):
+            if ConsiderClasses != -1 and i not in ConsiderClasses:
+                continue
             probability=0
             for j in range(self.classes[i].num_of_clusters):
                 if(np.linalg.det(self.classes[i].clusters[j].covariance)==0):
                     continue
-                probability+=self.classes[i].clusters[j].weight*multivariate_normal_pdf(vector,self.classes[i].clusters[j].mean,self.classes[i].clusters[j].covariance)
+                probability+=self.classes[i].clusters[j].weight*multivariate_normal_pdf(vector,self.classes[i].clusters[j].mean,self.classes[i].clusters[j].covariance,allow_singular=True)
             if probability>max_probability:
                 max_probability=probability
                 which_class=i
@@ -359,44 +459,90 @@ class Bayes_Classifier_GMM:
         
         plt.close()
 
-
-def all_setps(DataForEachClass,title,saveOnly=False):
-    # splitting the data into train data and test data
-    TrainData = []
-    TestData = []
-    for cls in DataForEachClass:
-        Train, Test = SplitList(cls, 0.7)
-        TrainData.append(Train)
-        TestData.append(Test)
+    def plot_contour(self,title,classes_data_to_show=[],saveOnly=False):
         
-    # creating models
-
-    model=Bayes_Classifier_GMM()
-
-    # train models
-    model.train(TrainData)
-
-
-    m = 0
-    m += 1
-    n = 0
-    print("\nfor case ", m)
-    for i in model.classes:
-        n += 1
-        print("Class", n)
-        print("Mean:\n", i.mean)
-        print("Covariance:\n", i.covariance)
-        print("Prior:\n", i.prior)
-        print("")
+        # plot each class data points
+        for cls in classes_data_to_show:
+            plt.scatter(
+                [i[0] for i in cls],
+                [i[1] for i in cls],
+                label="Class " + str(classes_data_to_show.index(cls) + 1),
+            )
             
-    # test model
-    n = 0
-    n += 1
-    print("\nfor case ", n)
-    confusion = model.test(TestData)
-    confusion.print()
+        # plot mean of each cluster
+        c_no=0
+        for cls in self.classes:
+            c_no+=1
+            cl_no=0
+            for cluster in cls.clusters:
+                cl_no+=1
+                plt.scatter(cluster.mean[0],cluster.mean[1],label="mean for class "+ str(c_no)+" cluster "+str(cl_no),marker="x",color="black")
+                
+        # plot countour for each cluster
+        xx, yy = grid_points(classes_data_to_show)
         
-    # plot decion regions
-    case = 0
-    case+=1
-    model.plot_decision_regions_2d(f"{title} for {case}",TrainData,saveOnly=saveOnly)
+        for cls in self.classes:
+            for cluster in cls.clusters:
+                pdf=np.zeros((GRID_SIZE,GRID_SIZE))
+                for i in range(GRID_SIZE):
+                    for j in range(GRID_SIZE):
+                        pdf[i][j]=multivariate_normal_pdf([xx[i][j],yy[i][j]],cluster.mean,cluster.covariance,allow_singular=True)
+                plt.contour(xx,yy,pdf,levels=3,colors='k',alpha=0.7)
+        
+        # plt.gca().set_aspect('equal', adjustable='box')
+        
+        plt.xlabel("Feature 1")
+
+        plt.ylabel("Feature 2")
+
+        plt.title("Coutour plot for " + title)
+
+        # legend = plt.legend(loc='upper left')
+        
+        # plt.legend()
+
+        if(saveOnly==False):
+            plt.show()
+        
+        plt.savefig(f"Images\Countour plot for {title}")
+        
+        plt.close()
+            
+    def plot_decision_regions_for_each_pair_of_classes(self, title, classes_data_to_show=[],saveOnly=False):
+        # plot between each pair of classes
+        for i in range(len(classes_data_to_show)):
+            for j in range(i+1,len(classes_data_to_show)):
+                xx,yy = grid_points(classes_data_to_show)
+                Grid_Points = np.c_[xx.ravel(), yy.ravel()]
+                # this line in not correct
+                predictions = np.array([self.predict(point,[i,j]) for point in Grid_Points])
+                predictions = predictions.reshape(xx.shape)
+                
+                plt.contourf(xx, yy, predictions, alpha=0.7, cmap=plt.cm.RdYlBu)
+                
+                # plotting the two classes
+                plt.scatter(
+                    [i[0] for i in classes_data_to_show[i]],
+                    [i[1] for i in classes_data_to_show[i]],
+                    label="Class " + str(i + 1),
+                )
+                plt.scatter(
+                    [i[0] for i in classes_data_to_show[j]],
+                    [i[1] for i in classes_data_to_show[j]],
+                    label="Class " + str(j + 1),
+                )
+
+                plt.xlabel("Feature 1")
+
+                plt.ylabel("Feature 2")
+
+                plt.title("Decision Regions for " + title+ f" beween classs{i+1} and class{j+1}")
+
+                plt.legend()
+
+                if(saveOnly==False):
+                    plt.show()
+                
+                plt.savefig(f"Images\Decision Regions for {title} beween_classs{i+1} and class{j+1}")
+                
+                plt.close()
