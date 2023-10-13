@@ -171,12 +171,12 @@ def EM_initialization(data, n_components):
     """
     
     a = k_means(data , n_components)
-    print("mu",a[0])
+    # print("mu",a[0])
     mu = a[0]
     
     w = []
     for i in a[1]:
-        print("len of i",len(i))
+        # print("len of i",len(i))
         N_k = len(i) / len(data)
         w.append(N_k)
     
@@ -276,7 +276,7 @@ def m_step(data, responsibilities):
     return means, covariances, weights
 
 
-def gmm(data, n_components):
+def gmm(data, n_components,max_itr=100):
     """
     1) initialization of means, covariances, weights
     2) define totalData_likelihood function
@@ -301,8 +301,8 @@ def gmm(data, n_components):
         for n in range(len(data)):
             l = 0
             for k in range(n_components):
-                print("mean",means[k])
-                print("covariance",covariances[k])
+                # print("mean",means[k])
+                # print("covariance",covariances[k])
                 l += weights[k] *multivariate_gaussian_pdf(data[n] , means[k] , covariances[k],allow_singular=True)
             likelihood += np.log10(l)
         return likelihood
@@ -313,6 +313,8 @@ def gmm(data, n_components):
     #iteration_list = [0]
     j=1
     while True:
+        if j == max_itr:
+            break
         #if j == 1:
             #up_means, up_covariances, up_weights = means, covariances, weights
             
@@ -514,7 +516,7 @@ class class_representation:
         data=np.array(data)
         
         print('data',data.shape)
-        means, covariances, weights  ,likelihood_list = gmm(data, self.num_of_clusters)
+        means, covariances, weights  ,likelihood_list = gmm(data, self.num_of_clusters,max_itr=max_itr)
         print("gmm done")
                         
         self.clusters = [Cluster_representation() for i in range(self.num_of_clusters)]
