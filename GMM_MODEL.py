@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from utils import *
 from scipy.stats import multivariate_normal
 multivariate_normal_pdf = multivariate_normal.pdf
+from sklearn.cluster import KMeans
 # from ConfusionMatrix import *
 
 # K- MEANS CLUSTERING
@@ -295,9 +296,11 @@ class class_representation:
         # initilizing cluster centers with help of k-means
         
         data1=np.array(data)
-        centers=k_means(data1,self.num_of_clusters,5)
+        # centers=k_means(data1,self.num_of_clusters,5)
+        kmeans = KMeans(n_clusters=self.num_of_clusters).fit(data)
+        centers=[ c for c in kmeans.cluster_centers_ ]
 
-        
+        self.prior=len(data)
         self.clusters = [Cluster_representation() for i in range(self.num_of_clusters)]
         for i in range(self.num_of_clusters):
             self.clusters[i].mean=centers[i]
@@ -341,17 +344,18 @@ class class_representation:
             # calculating the weight of each cluster
             for i in range(self.num_of_clusters):
                 new_clusters[i].weight=Effective_num_of_points[i]/len(data)
-                
+            
+            likelihood.append([iteration_no,self.total_data_likelihood(data)])
+            
+            print("total log likelihood",self.total_data_likelihood(data))
             # checking for convergence
             converged=True
             for i in range(self.num_of_clusters):
                 percentage_change = abs((new_clusters[i].mean - self.clusters[i].mean) / self.clusters[i].mean) * 100
                 print("percentage change in mean :",percentage_change)
-                if (percentage_change > 0.5).any():
+                if (percentage_change > 0.05).any():
                     converged = False
                     break
-            
-            likelihood.append([iteration_no,self.total_data_likelihood(data)])
             
             if converged:
                 break   
@@ -478,9 +482,7 @@ class Bayes_Classifier_GMM:
                 cl_no+=1
                 plt.scatter(cluster.mean[0],cluster.mean[1],label="mean for class "+ str(c_no)+" cluster "+str(cl_no),marker="x",color="black")
                 
-        # plot countour for each cluster
-        xx, yy = grid_points(classes_data_to_show)
-        
+        # plot ellips for each cluster with help of covariace matrix around mean
         for cls in self.classes:
             for cluster in cls.clusters:
                 pdf=np.zeros((GRID_SIZE,GRID_SIZE))
